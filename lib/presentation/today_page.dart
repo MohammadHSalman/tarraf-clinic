@@ -26,7 +26,7 @@ String appointmentKind(BuildContext c, Map<String, dynamic> r) =>
     ? c.tr('مشفى', 'Hospital')
     : c.tr('عيادة', 'Clinic');
 
-/// Appointment label is stored as "<patient> — <reason>".
+/// Appointment label is stored as "patient — reason".
 (String, String) splitLabel(Map<String, dynamic> r) {
   final text = '${r['label'] ?? ''}';
   final i = text.indexOf(' — ');
