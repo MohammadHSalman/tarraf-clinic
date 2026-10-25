@@ -32,6 +32,11 @@ jobs:
         continue-on-error: true
       - name: Build release APK (x86_64 emulator)
         run: set -o pipefail; flutter build apk --release --target-platform android-x64 --split-debug-info=build/symbols 2>&1 | tee build.txt
+      - name: Stash x86_64 APK and build ARM64 (phones)
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk tarraf_clinic_emulator.apk
+          set -o pipefail; flutter build apk --release --target-platform android-arm64 --split-debug-info=build/symbols-arm 2>&1 | tee build-arm.txt
+          cp build/app/outputs/flutter-apk/app-release.apk tarraf_clinic_phone.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -53,5 +58,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk tarraf_clinic_emulator.apk
-          gh release create "emulator-${{ github.run_number }}" tarraf_clinic_emulator.apk --title "Emulator build ${{ github.run_number }}" --notes "Release APK (x86_64, debug-signed) for the Android emulator. Commit ${{ github.sha }}"
+          gh release create "emulator-${{ github.run_number }}" tarraf_clinic_emulator.apk tarraf_clinic_phone.apk --title "Emulator build ${{ github.run_number }}" --notes "Release APKs: tarraf_clinic_phone.apk (ARM64, real phones) and tarraf_clinic_emulator.apk (x86_64, emulators). Commit ${{ github.sha }}"
