@@ -5,6 +5,7 @@ import '../data/report_repository.dart';
 import '../domain/models.dart';
 import '../domain/fx.dart';
 import '../data/workspace_repository.dart';
+import '../ui/tokens.dart';
 import 'luxury.dart';
 import 'report_charts.dart';
 import '../services/report_pdf.dart';
@@ -67,25 +68,18 @@ class _ReportsPageState extends State<ReportsPage> {
         final fx = s.data![6] as Fx;
         String fmt(int n) => fx.dual(n);
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            PageIntro(
-              context.tr('مؤشرات العيادة', 'Practice insights'),
-              context.tr(
-                'رؤية واضحة لأداء عيادتك',
-                'A clear view of your practice',
-              ),
-              Icons.insights_outlined,
-            ),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     context.tr('التقارير المالية', 'Financial reports'),
-                    style: Theme.of(c).textTheme.headlineSmall,
+                    style: tjw(24, FontWeight.w800),
                   ),
                 ),
-                IconButton(
+                IconButton.filledTonal(
+                  tooltip: context.tr('تصدير PDF', 'Export PDF'),
                   onPressed: () => context.guard(
                     () => ReportPdf.share(
                       report,
@@ -96,24 +90,41 @@ class _ReportsPageState extends State<ReportsPage> {
                       fx: fx,
                     ),
                   ),
-                  icon: const Icon(Icons.picture_as_pdf),
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
                 ),
               ],
             ),
-            TextButton.icon(
-              onPressed: () async {
-                final r = await showDateRangePicker(
-                  context: c,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (r != null) setState(() => range = r);
-              },
-              icon: const Icon(Icons.date_range),
-              label: Text(
-                '${filter.from.toLocal().toString().substring(0, 10)} — ${filter.until.toLocal().subtract(const Duration(days: 1)).toString().substring(0, 10)}',
-              ),
-            ),
+            const SizedBox(height: 10),
+            GlassCard(
+              flat: true,
+              padding: EdgeInsets.zero,
+              child: Theme(
+                data: Theme.of(c).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  leading: const Icon(Icons.tune_rounded, color: Tk.goldDeep),
+                  title: Text(
+                    context.tr('المرشحات', 'Filters'),
+                    style: tjw(15.5, FontWeight.w800),
+                  ),
+                  subtitle: Text(
+                    '${filter.from.toLocal().toString().substring(0, 10)} — ${filter.until.toLocal().subtract(const Duration(days: 1)).toString().substring(0, 10)}',
+                    style: tjw(12.5, FontWeight.w400, color: Tk.inkSoft),
+                  ),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final r = await showDateRangePicker(
+                          context: c,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (r != null) setState(() => range = r);
+                      },
+                      icon: const Icon(Icons.date_range_rounded),
+                      label: Text(context.tr('تغيير الفترة', 'Change period')),
+                    ),
+                    const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue:
                   procedureId ?? (procedure == null ? '' : 'legacy:$procedure'),
@@ -197,10 +208,14 @@ class _ReportsPageState extends State<ReportsPage> {
               ],
               onChanged: (v) => setState(() => status = v!),
             ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
             Text(
               context.tr('الاستحقاق • تاريخ الجلسة', 'Accrual • Session date'),
-              style: Theme.of(c).textTheme.titleLarge,
+              style: tjw(18, FontWeight.w800),
             ),
             KpiCard(
               context.tr('الأتعاب المستحقة', 'Fees billed'),
@@ -219,10 +234,14 @@ class _ReportsPageState extends State<ReportsPage> {
                   : fmt(report.fees - report.costs),
             ),
             if (report.unknownCosts > 0)
-              Text(
-                context.tr(
-                  'توجد تكاليف تاريخية غير مسجلة؛ لم تُحسب على أنها صفر.',
-                  'Historical costs are missing; they were not treated as zero.',
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  context.tr(
+                    'توجد تكاليف تاريخية غير مسجلة؛ لم تُحسب على أنها صفر.',
+                    'Historical costs are missing; they were not treated as zero.',
+                  ),
+                  style: tjw(12.5, FontWeight.w500, color: Tk.amber),
                 ),
               ),
             const SizedBox(height: 20),
@@ -231,7 +250,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 'التدفق النقدي • تاريخ الدفعة',
                 'Cash flow • Payment date',
               ),
-              style: Theme.of(c).textTheme.titleLarge,
+              style: tjw(18, FontWeight.w800),
             ),
             KpiCard(
               context.tr('المقبوضات المطابقة', 'Matching receipts'),
@@ -261,6 +280,7 @@ class _ReportsPageState extends State<ReportsPage> {
               fmt(report.unallocatedCashMinor),
             ),
             Text(
+              style: tjw(12, FontWeight.w400, color: Tk.inkSoft, height: 1.5),
               context.tr(
                 'مرشحات الإجراء والسداد تخص الأجزاء الموزعة من الدفعات. الرصيد غير الموزع يعرض مستقلاً لكل الفترة. حالة السداد حسب الوضع الحالي.',
                 'Procedure and payment-status filters select allocated portions. Unallocated receipts are shown separately for the whole period. Payment status is current.',

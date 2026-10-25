@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../domain/models.dart';
+import '../ui/tokens.dart';
 import 'luxury.dart';
 
 class ProcedureDonut extends StatefulWidget {
@@ -22,9 +23,9 @@ class _ProcedureDonutState extends State<ProcedureDonut> {
     }
     final colors = [
       navy,
-      const Color(0xff0D9488),
+      Tk.sage,
       silver,
-      const Color(0xffD97706),
+      Tk.amber,
     ];
     String label(String k) => switch (k) {
       'surgery' => widget.arabic ? 'جراحة' : 'Surgery',
@@ -115,7 +116,7 @@ class _ProcedureDonutState extends State<ProcedureDonut> {
         children: [
           Text(
             widget.arabic ? 'توزيع الإجراءات' : 'Procedure distribution',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            style: tjw(18, FontWeight.w800),
           ),
           const SizedBox(height: 16),
           if (groups.isEmpty)
@@ -212,7 +213,7 @@ class _CashBarsState extends State<CashBars> {
             widget.arabic
                 ? 'المقبوض والمتبقي حسب الشهر'
                 : 'Monthly receipts & outstanding',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            style: tjw(18, FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
@@ -252,7 +253,7 @@ class _CashBarsState extends State<CashBars> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: selected == k
-                                ? const Color(0xffE2E8F0)
+                                ? Tk.line
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(14),
                           ),

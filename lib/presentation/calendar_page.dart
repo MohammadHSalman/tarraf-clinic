@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../application/clinic_controller.dart';
 import '../core/reminders.dart';
 import 'common.dart';
+import '../ui/tokens.dart';
+import '../ui/widgets.dart';
 import 'luxury.dart';
+import 'today_page.dart' show appointmentColor, splitLabel;
 import '../data/workspace_repository.dart';
 
 int notificationId(String id) =>
@@ -131,11 +134,6 @@ class _CalendarPageState extends State<CalendarPage> {
   Future<List<Map<String, dynamic>>> appointments() =>
       context.clinic.appointments();
 
-  Color color(Map<String, dynamic> r) => r['type'] == 'renewal'
-      ? const Color(0xffD97706)
-      : r['hospital'] == true
-      ? const Color(0xff7C3AED)
-      : const Color(0xff0D9488);
   @override
   Widget build(BuildContext c) {
     c.watch<ClinicController>();
@@ -160,13 +158,8 @@ class _CalendarPageState extends State<CalendarPage> {
               : at.year == day.year && at.month == day.month;
         }).toList();
         return ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
-            PageIntro(
-              c.tr('مواعيدك', 'Your schedule'),
-              c.tr('إيقاع يومك بكل وضوح', 'Your day, beautifully organised'),
-              Icons.calendar_month_outlined,
-            ),
             Row(
               children: [
                 Expanded(
@@ -209,10 +202,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   child: Text(
                     MaterialLocalizations.of(c).formatMonthYear(day),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: tjw(20, FontWeight.w800),
                   ),
                 ),
                 IconButton(
@@ -235,7 +225,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             child: Text(
                               weekdays[(firstDow + k) % 7],
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: silver),
+                              style: tjw(12.5, FontWeight.w600, color: Tk.inkFaint),
                             ),
                           ),
                       ],
@@ -276,7 +266,11 @@ class _CalendarPageState extends State<CalendarPage> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               decoration: BoxDecoration(
-                                color: active ? navy : Colors.transparent,
+                                color: active
+                                    ? Tk.ink
+                                    : DateUtils.isSameDay(date, DateTime.now())
+                                    ? Tk.goldSoft
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Column(
@@ -284,16 +278,17 @@ class _CalendarPageState extends State<CalendarPage> {
                                 children: [
                                   Text(
                                     '$n',
-                                    style: TextStyle(
-                                      color: active ? Colors.white : navy,
-                                      fontWeight: FontWeight.w700,
+                                    style: tjw(
+                                      14.5,
+                                      FontWeight.w700,
+                                      color: active ? Colors.white : Tk.ink,
                                     ),
                                   ),
                                   Wrap(
                                     spacing: 2,
                                     children: [
                                       for (final type
-                                          in events.map(color).toSet())
+                                          in events.map(appointmentColor).toSet())
                                         Container(
                                           width: 4,
                                           height: 4,
@@ -318,9 +313,9 @@ class _CalendarPageState extends State<CalendarPage> {
               spacing: 12,
               children: [
                 for (final item in [
-                  (const Color(0xff0D9488), c.tr('عيادة', 'Clinic')),
-                  (const Color(0xff7C3AED), c.tr('مشفى', 'Hospital')),
-                  (const Color(0xffD97706), c.tr('إعادة حقن', 'Renewal')),
+                  (Tk.sage, c.tr('عيادة', 'Clinic')),
+                  (Tk.plum, c.tr('مشفى', 'Hospital')),
+                  (Tk.amber, c.tr('إعادة حقن', 'Renewal')),
                 ])
                   Chip(
                     avatar: Icon(Icons.circle, color: item.$1, size: 10),
@@ -331,55 +326,93 @@ class _CalendarPageState extends State<CalendarPage> {
             const SizedBox(height: 14),
             if (visible.isEmpty)
               Padding(
-                padding: const EdgeInsets.all(30),
-                child: Center(
-                  child: Text(
-                    c.tr(
-                      'لا مواعيد في الفترة المحددة',
-                      'No appointments in this period',
-                    ),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: EmptyState(
+                  icon: Icons.event_busy_outlined,
+                  title: c.tr('لا مواعيد', 'No appointments'),
+                  message: c.tr(
+                    'لا مواعيد في الفترة المحددة.',
+                    'Nothing scheduled in this period.',
+                  ),
+                  action: OutlinedButton.icon(
+                    onPressed: add,
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text(c.tr('إضافة موعد', 'Add appointment')),
                   ),
                 ),
               ),
             for (final r in visible)
-              GlassCard(
-                padding: const EdgeInsets.all(16),
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 5,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: color(r),
-                      borderRadius: BorderRadius.circular(5),
+              Builder(
+                builder: (c) {
+                  final (name, reason) = splitLabel(r);
+                  return GlassCard(
+                    flat: true,
+                    padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 5,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: appointmentColor(r),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: tjw(15.5, FontWeight.w800)),
+                              if (reason.isNotEmpty)
+                                Text(
+                                  reason,
+                                  style: tjw(
+                                    13,
+                                    FontWeight.w400,
+                                    color: Tk.inkSoft,
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              Text(
+                                clinicalDate(c, r['at'] as String),
+                                style: tjw(
+                                  12.5,
+                                  FontWeight.w600,
+                                  color: appointmentColor(r),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: c.tr('حذف الموعد', 'Delete appointment'),
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Tk.inkSoft,
+                          ),
+                          onPressed: () async {
+                            final ok = await confirmDialog(
+                              c,
+                              c.tr('حذف الموعد؟', 'Delete appointment?'),
+                            );
+                            if (!ok || !c.mounted) return;
+                            await c.guard(() async {
+                              final repo = c.repo;
+                              await widget.reminders.cancel(
+                                notificationId(r['id'] as String),
+                              );
+                              await widget.reminders.cancel(
+                                notificationId(r['id'] as String) + 1,
+                              );
+                              await repo.removeDocument(r['id'] as String);
+                            });
+                          },
+                        ),
+                      ],
                     ),
-                  ),
-                  title: Text(
-                    '${r['label']}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(clinicalDate(c, r['at'] as String)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () async {
-                      final ok = await confirmDialog(
-                        c,
-                        c.tr('حذف الموعد؟', 'Delete appointment?'),
-                      );
-                      if (!ok || !c.mounted) return;
-                      await c.guard(() async {
-                        final repo = c.repo;
-                        await widget.reminders.cancel(
-                          notificationId(r['id'] as String),
-                        );
-                        await widget.reminders.cancel(
-                          notificationId(r['id'] as String) + 1,
-                        );
-                        await repo.removeDocument(r['id'] as String);
-                      });
-                    },
-                  ),
-                ),
+                  );
+                },
               ),
           ],
         );
