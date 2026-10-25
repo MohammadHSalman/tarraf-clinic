@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../application/clinic_controller.dart';
 import '../data/clinic_repository.dart';
+import '../ui/tokens.dart';
 
 extension ClinicContext on BuildContext {
   ClinicController get clinic => read<ClinicController>();
@@ -43,103 +44,124 @@ Future<Map<String, String>?> formDialog(
     }
   }
   final form = GlobalKey<FormState>();
-  final result = await showDialog<Map<String, String>>(
+  TextInputType keyboardFor(String key) {
+    if (previews.containsKey(key) || ['stock', 'rate'].contains(key)) {
+      return const TextInputType.numberWithOptions(decimal: true);
+    }
+    if (key == 'age') return TextInputType.number;
+    if (key == 'phone') return TextInputType.phone;
+    return TextInputType.text;
+  }
+
+  final result = await showModalBottomSheet<Map<String, String>>(
     context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
     builder: (c) => StatefulBuilder(
-      builder: (c, setDialog) => AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: 420,
+      builder: (c, setSheet) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          22,
+          0,
+          22,
+          MediaQuery.viewInsetsOf(c).bottom + 22,
+        ),
+        child: SingleChildScrollView(
           child: Form(
             key: form,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final e in fields.entries)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: choices.containsKey(e.key)
-                          ? DropdownButtonFormField<String>(
-                              initialValue:
-                                  choices[e.key]!.containsKey(initial[e.key])
-                                  ? initial[e.key]
-                                  : (optional.contains(e.key)
-                                        ? null
-                                        : choices[e.key]!.keys.first),
-                              isExpanded: true,
-                              decoration: InputDecoration(labelText: e.value),
-                              items: [
-                                for (final o in choices[e.key]!.entries)
-                                  DropdownMenuItem(
-                                    value: o.key,
-                                    child: Text(
-                                      o.value,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(title, style: Theme.of(c).textTheme.titleLarge),
+                const SizedBox(height: 18),
+                for (final e in fields.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: choices.containsKey(e.key)
+                        ? DropdownButtonFormField<String>(
+                            initialValue:
+                                choices[e.key]!.containsKey(initial[e.key])
+                                ? initial[e.key]
+                                : (optional.contains(e.key)
+                                      ? null
+                                      : choices[e.key]!.keys.first),
+                            isExpanded: true,
+                            decoration: InputDecoration(labelText: e.value),
+                            items: [
+                              for (final o in choices[e.key]!.entries)
+                                DropdownMenuItem(
+                                  value: o.key,
+                                  child: Text(
+                                    o.value,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                              ],
-                              onChanged: (v) {
-                                cs[e.key]!.text = v ?? '';
-                                HapticFeedback.selectionClick();
-                              },
-                              validator: (v) =>
-                                  !optional.contains(e.key) && v == null
-                                  ? 'مطلوب / Required'
-                                  : null,
-                            )
-                          : TextFormField(
-                              controller: cs[e.key],
-                              onChanged: previews.containsKey(e.key)
-                                  ? (_) => setDialog(() {})
-                                  : null,
-                              keyboardType:
-                                  previews.containsKey(e.key) ||
-                                      ["stock", "rate", "age"].contains(e.key)
-                                  ? const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    )
-                                  : TextInputType.text,
-                              obscureText: e.key == 'password',
-                              maxLines: e.key == 'notes' || e.key == 'body'
-                                  ? 4
-                                  : 1,
-                              decoration: InputDecoration(
-                                labelText: e.value,
-                                helperMaxLines: 3,
-                                helperText: _preview(
-                                  previews[e.key],
-                                  cs[e.key]!.text,
                                 ),
+                            ],
+                            onChanged: (v) {
+                              cs[e.key]!.text = v ?? '';
+                              HapticFeedback.selectionClick();
+                            },
+                            validator: (v) =>
+                                !optional.contains(e.key) && v == null
+                                ? context.tr('مطلوب', 'Required')
+                                : null,
+                          )
+                        : TextFormField(
+                            controller: cs[e.key],
+                            onChanged: previews.containsKey(e.key)
+                                ? (_) => setSheet(() {})
+                                : null,
+                            keyboardType: keyboardFor(e.key),
+                            obscureText: e.key == 'password',
+                            maxLines: e.key == 'notes' || e.key == 'body'
+                                ? 4
+                                : 1,
+                            decoration: InputDecoration(
+                              labelText: e.value,
+                              helperMaxLines: 3,
+                              helperText: _preview(
+                                previews[e.key],
+                                cs[e.key]!.text,
                               ),
-                              validator: (v) =>
-                                  !optional.contains(e.key) &&
-                                      (v ?? '').trim().isEmpty
-                                  ? 'مطلوب / Required'
-                                  : null,
                             ),
+                            validator: (v) =>
+                                !optional.contains(e.key) &&
+                                    (v ?? '').trim().isEmpty
+                                ? context.tr('مطلوب', 'Required')
+                                : null,
+                          ),
+                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(c),
+                        child: Text(context.tr('إلغاء', 'Cancel')),
+                      ),
                     ),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        onPressed: () {
+                          if (form.currentState!.validate()) {
+                            Navigator.pop(c, {
+                              for (final e in cs.entries)
+                                e.key: e.value.text.trim(),
+                            });
+                          }
+                        },
+                        child: Text(context.tr('حفظ', 'Save')),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: Text(context.tr('إلغاء', 'Cancel')),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (form.currentState!.validate()) {
-                Navigator.pop(c, {
-                  for (final e in cs.entries) e.key: e.value.text.trim(),
-                });
-              }
-            },
-            child: Text(context.tr('حفظ', 'Save')),
-          ),
-        ],
       ),
     ),
   );
@@ -150,24 +172,21 @@ Future<Map<String, String>?> formDialog(
   return result;
 }
 
-Widget moneyCard(String title, String value, {Color? color}) => Card(
-  child: Padding(
-    padding: const EdgeInsets.all(18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title),
-        const SizedBox(height: 12),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-      ],
-    ),
+Widget moneyCard(String title, String value, {Color? color}) => Container(
+  margin: const EdgeInsets.only(bottom: 12),
+  padding: const EdgeInsets.all(18),
+  decoration: BoxDecoration(
+    color: Tk.surface,
+    borderRadius: BorderRadius.circular(Tk.r),
+    border: Border.all(color: Tk.line),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(title, style: tjw(13.5, FontWeight.w500, color: Tk.inkSoft)),
+      const SizedBox(height: 8),
+      Text(value, style: tjw(22, FontWeight.w800, color: color ?? Tk.ink)),
+    ],
   ),
 );
 Widget loadingError(AsyncSnapshot<dynamic> s) {
@@ -175,7 +194,7 @@ Widget loadingError(AsyncSnapshot<dynamic> s) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Text('${s.error}'),
+        child: Text(friendlyError(s.error!), textAlign: TextAlign.center),
       ),
     );
   }

@@ -17,7 +17,9 @@ void main() {
     'narrow Arabic handset fits charts dual amounts and long medical alerts',
     (tester) async {
       final font = FontLoader('Tajawal')
-        ..addFont(rootBundle.load('assets/Tajawal.ttf'));
+        ..addFont(rootBundle.load('assets/fonts/Tajawal-Regular.ttf'))
+        ..addFont(rootBundle.load('assets/fonts/Tajawal-Bold.ttf'))
+        ..addFont(rootBundle.load('assets/fonts/Tajawal-ExtraBold.ttf'));
       await font.load();
       final imageKey = GlobalKey();
       tester.view.physicalSize = const Size(320, 800);

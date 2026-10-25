@@ -64,7 +64,7 @@ class ClinicRepository {
   });
   Future<List<Map<String, dynamic>>> patients({bool archived = false}) async {
     final rows = await db.rawQuery(
-      "SELECT p.*,(SELECT COUNT(*) FROM sessions s WHERE s.patient_id=p.patient_id AND s.status<>'cancelled') visit_count,(SELECT procedure_name FROM sessions s WHERE s.patient_id=p.patient_id AND s.status<>'cancelled' ORDER BY performed_at DESC LIMIT 1) last_procedure FROM patients p WHERE is_archived=? AND is_hidden=0",
+      "SELECT p.*,(SELECT COUNT(*) FROM sessions s WHERE s.patient_id=p.patient_id AND s.status<>'cancelled') visit_count,(SELECT procedure_name FROM sessions s WHERE s.patient_id=p.patient_id AND s.status<>'cancelled' ORDER BY performed_at DESC LIMIT 1) last_procedure,(SELECT MAX(performed_at) FROM sessions s WHERE s.patient_id=p.patient_id AND s.status<>'cancelled') last_visit FROM patients p WHERE is_archived=? AND is_hidden=0",
       [archived ? 1 : 0],
     );
     final result = <Map<String, dynamic>>[];
@@ -76,6 +76,7 @@ class ClinicRepository {
         'revision': row['revision'],
         'visit_count': row['visit_count'],
         'last_procedure': row['last_procedure'],
+        'last_visit': row['last_visit'],
       });
     }
     return result;
@@ -635,6 +636,13 @@ class ClinicRepository {
     }
     out.sort((a, b) => '${a['at']}'.compareTo('${b['at']}'));
     return out;
+  }
+
+  Future<int> draftCount() async {
+    final rows = await db.rawQuery(
+      "SELECT COUNT(*) c FROM sessions WHERE status='draft'",
+    );
+    return rows.first['c'] as int;
   }
 
   Future<void> removeDocument(String id) =>

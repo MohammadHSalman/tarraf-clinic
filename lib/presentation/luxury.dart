@@ -1,55 +1,42 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../ui/tokens.dart';
 
-const navy = Color(0xff1E293B),
-    silver = Color(0xff94A3B8),
-    coral = Color(0xffEF4444);
+// Legacy names kept so existing screens pick up the new palette.
+const navy = Tk.ink, silver = Tk.inkFaint, coral = Tk.rose;
 void tapFeedback() => HapticFeedback.selectionClick();
 
+/// Surface card. (Name kept for compatibility; no blur, clean surface.)
 class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+  final Color? color;
+  final bool flat;
   const GlassCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(22),
+    this.padding = const EdgeInsets.all(18),
+    this.onTap,
+    this.color,
+    this.flat = false,
   });
   @override
   Widget build(BuildContext c) => Container(
-    margin: const EdgeInsets.only(bottom: 16),
+    margin: const EdgeInsets.only(bottom: 14),
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(24),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x091E293B),
-          blurRadius: 28,
-          offset: Offset(0, 12),
-        ),
-        BoxShadow(
-          color: Color(0x061E293B),
-          blurRadius: 5,
-          offset: Offset(0, 2),
-        ),
-      ],
+      color: color ?? Tk.surface,
+      borderRadius: BorderRadius.circular(Tk.r),
+      border: Border.all(color: Tk.line),
+      boxShadow: flat ? null : Tk.shadow,
     ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xf5FFFFFF), Color(0xcceef2f6)],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: .9)),
-          ),
-          child: child,
-        ),
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(Tk.r),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(padding: padding, child: child),
       ),
     ),
   );
@@ -63,28 +50,53 @@ class MedicalAlert extends StatelessWidget {
     final text = '${patient['allergies'] ?? ''} ${patient['critical'] ?? ''}'
         .trim();
     if (text.isEmpty) return const SizedBox.shrink();
+    final arabic = Localizations.localeOf(c).languageCode == 'ar';
     return Semantics(
       liveRegion: true,
-      label: 'تنبيه طبي: $text',
+      label: '${arabic ? 'تنبيه طبي' : 'Medical alert'}: $text',
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: coral.withValues(alpha: .1),
+          color: Tk.roseSoft,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: coral.withValues(alpha: .3)),
+          border: Border.all(color: Tk.rose.withValues(alpha: .25)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.health_and_safety_outlined, color: coral),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Tk.rose.withValues(alpha: .12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.health_and_safety_outlined,
+                color: Tk.rose,
+                size: 20,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Color(0xffB91C1C),
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    arabic ? 'تنبيه طبي' : 'Medical alert',
+                    style: tjw(12, FontWeight.w800, color: Tk.rose),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    text,
+                    style: tjw(
+                      14.5,
+                      FontWeight.w700,
+                      color: const Color(0xff8E2F28),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -94,42 +106,38 @@ class MedicalAlert extends StatelessWidget {
   }
 }
 
+/// Page heading with a soft gold icon medallion.
 class PageIntro extends StatelessWidget {
   final String title, subtitle;
   final IconData icon;
   const PageIntro(this.title, this.subtitle, this.icon, {super.key});
   @override
   Widget build(BuildContext c) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 18),
+    padding: const EdgeInsets.symmetric(vertical: 14),
     child: Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: navy,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Icon(icon, color: Colors.white),
-        ),
-        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: navy,
-                ),
-              ),
+              Text(title, style: tjw(26, FontWeight.w800, height: 1.2)),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(color: Color(0xff64748B), fontSize: 12),
+                style: tjw(13.5, FontWeight.w400, color: Tk.inkSoft),
               ),
             ],
           ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          width: 48,
+          height: 48,
+          decoration: const BoxDecoration(
+            color: Tk.goldSoft,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Tk.goldDeep, size: 24),
         ),
       ],
     ),
