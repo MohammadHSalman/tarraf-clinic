@@ -412,7 +412,7 @@ class _PatientPageState extends State<PatientPage> {
                           'Delete draft and its points?',
                         ),
                       );
-                      if (ok && mounted) {
+                      if (ok && c.mounted) {
                         await c.guard(
                           () => c.repo.deleteDraft(row['session_id'] as String),
                         );
@@ -433,7 +433,7 @@ class _PatientPageState extends State<PatientPage> {
                           'Cancel session and keep its history?',
                         ),
                       );
-                      if (ok && mounted) {
+                      if (ok && c.mounted) {
                         await c.guard(
                           () => c.repo.cancelSession(
                             row['session_id'] as String,
@@ -580,7 +580,7 @@ class _PatientPageState extends State<PatientPage> {
                           c.tr('إلغاء دفعة', 'Void payment'),
                           {'reason': c.tr('سبب الإلغاء', 'Reason')},
                         );
-                        if (reason != null && mounted) {
+                        if (reason != null && c.mounted) {
                           await c.guard(
                             () => c.repo.voidPayment(
                               p['payment_id'] as String,
