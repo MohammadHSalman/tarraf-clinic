@@ -48,3 +48,15 @@ Final APK SHA-256: d84add66217fbbd70de5812f729b3c4ffa0d01c4b55c2700222e677e47f88
 ## 0.4.0 validation
 
 23 automated tests passed; Dart analyzer reported no issues. New coverage includes exact USD/SYP conversion, ledger preference preservation, stock edit/delete/shortage rollback, inventory-aware backup restore, explicit archive/restore, procedure UUID filtering after rename, schema 2 → 4 preservation and a 320 logical-pixel Arabic layout test with interactive chart selection. A real-font internal render was inspected. Native release APK 0.4.0 / versionCode 4 built successfully. APK signature matches 0.2.0 (certificate SHA256 e1d9cc219390f91a2e3fc00962d58e0f28d1a5f959a89166bf5d729761e01e6a). Android 7 x86_64 emulator accepted an in-place update from the actual 0.2.0 APK. A synthetic patient, age, phone, allergy and critical note remained visible in the new UI after schema upgrade, with Wi-Fi and mobile data disabled; no Flutter/AndroidRuntime errors were logged. The native reports page and its procedure/category/payment-status pickers also loaded successfully. ZIP CRC and all 9 native ELF header/segment boundaries passed validation. The final incremental build logged an llvm-strip temporary-file warning; the packaged ELF headers and all loadable segment bounds were checked and valid, and the x86_64 APK subsequently installed and launched. APK SHA256: cd112123113eefec5002ea623ecd7a462bad0d187dfbb5c9a8cb50b9f478fd10. Physical camera, biometric hardware and real handset acceptance remain outside these automated checks.
+
+
+## 0.4.1 refactor (unverified build)
+
+Changes made without a Flutter toolchain available: run `flutter analyze` and `flutter test` before building.
+- Patients/appointments are cached per data generation in ClinicController (no re-query/decrypt on search, tab switch or day selection); appointments load with one joined query.
+- Tabs stay alive (lazy IndexedStack); calendar keeps its state.
+- Lock screen: branded, auto-prompt, device PIN/pattern fallback (biometricOnly=false) so a failed/removed fingerprint can no longer lock the doctor out.
+- Backup: last export date stored in settings, shown in Settings, and a banner on the patient list after 7 days without a backup.
+- Calendar: locale-driven first weekday and month title, delete confirmation, labelled appointment-type field.
+- Friendly error messages, localized dates/statuses, internal version id removed from the injection table.
+- Android signing: key.properties (git-ignored) or legacy private/ folder; falls back to debug key if neither exists.

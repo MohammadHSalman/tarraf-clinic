@@ -1,0 +1,5 @@
+# Copy to android/key.properties (git-ignored) and move the keystore OUT of the project folder.
+storeFile=C:/secure/clinic-release.jks
+storePassword=CHANGE_ME
+keyAlias=clinic
+keyPassword=CHANGE_ME

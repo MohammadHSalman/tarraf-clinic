@@ -620,6 +620,23 @@ class ClinicRepository {
     return out;
   }
 
+  Future<List<Map<String, dynamic>>> appointments() async {
+    final rows = await db.rawQuery(
+      "SELECT d.document_id,d.patient_id,d.payload FROM documents d JOIN patients p ON p.patient_id=d.patient_id WHERE d.kind='appointments' AND p.is_archived=0 AND p.is_hidden=0",
+    );
+    final out = <Map<String, dynamic>>[];
+    for (final row in rows) {
+      final doc = row['document_id'] as String;
+      out.add({
+        ...await box.open(row['payload'] as String, context: 'document:$doc'),
+        'id': doc,
+        'patient_id': row['patient_id'],
+      });
+    }
+    out.sort((a, b) => '${a['at']}'.compareTo('${b['at']}'));
+    return out;
+  }
+
   Future<void> removeDocument(String id) =>
       db.delete('documents', where: 'document_id=?', whereArgs: [id]);
 }

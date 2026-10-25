@@ -56,10 +56,7 @@ class _CalendarPageState extends State<CalendarPage> {
       context.tr('موعد', 'Appointment'),
       {
         'title': context.tr('السبب', 'Reason'),
-        'type': context.tr(
-          'clinic / hospital / renewal',
-          'clinic / hospital / renewal',
-        ),
+        'type': context.tr('نوع الموعد', 'Appointment type'),
         'months': context.tr(
           'تجديد بعد 4–6 أشهر (اختياري)',
           'Renew in 4–6 months (optional)',
@@ -131,20 +128,8 @@ class _CalendarPageState extends State<CalendarPage> {
     });
   }
 
-  Future<List<Map<String, dynamic>>> appointments() async {
-    final repo = context.repo;
-    final patients = await repo.patients();
-    final rows = <Map<String, dynamic>>[];
-    for (final p in patients) {
-      rows.addAll(
-        await repo.documents(
-          'appointments',
-          patient: p['patient_id'] as String,
-        ),
-      );
-    }
-    return rows..sort((a, b) => '${a['at']}'.compareTo('${b['at']}'));
-  }
+  Future<List<Map<String, dynamic>>> appointments() =>
+      context.clinic.appointments();
 
   Color color(Map<String, dynamic> r) => r['type'] == 'renewal'
       ? const Color(0xffD97706)
@@ -160,7 +145,14 @@ class _CalendarPageState extends State<CalendarPage> {
         if (!s.hasData) return loadingError(s);
         final rows = s.data!,
             first = DateTime(day.year, day.month, 1),
-            count = DateTime(day.year, day.month + 1, 0).day;
+            count = DateTime(day.year, day.month + 1, 0).day,
+            lead =
+                (first.weekday % 7 -
+                    MaterialLocalizations.of(c).firstDayOfWeekIndex +
+                    7) %
+                7;
+        final weekdays = MaterialLocalizations.of(c).narrowWeekdays,
+            firstDow = MaterialLocalizations.of(c).firstDayOfWeekIndex;
         final visible = rows.where((r) {
           final at = DateTime.parse(r['at'] as String).toLocal();
           return grid
@@ -215,7 +207,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
                 Expanded(
                   child: Text(
-                    '${day.year} / ${day.month}',
+                    MaterialLocalizations.of(c).formatMonthYear(day),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 22,
@@ -238,13 +230,10 @@ class _CalendarPageState extends State<CalendarPage> {
                   children: [
                     Row(
                       children: [
-                        for (final d
-                            in c.clinic.arabic
-                                ? ['ن', 'ث', 'ر', 'خ', 'ج', 'س', 'ح']
-                                : ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+                        for (var k = 0; k < 7; k++)
                           Expanded(
                             child: Text(
-                              d,
+                              weekdays[(firstDow + k) % 7],
                               textAlign: TextAlign.center,
                               style: const TextStyle(color: silver),
                             ),
@@ -255,7 +244,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: first.weekday - 1 + count,
+                      itemCount: lead + count,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 7,
@@ -263,7 +252,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             crossAxisSpacing: 3,
                           ),
                       itemBuilder: (c, i) {
-                        final n = i - first.weekday + 2;
+                        final n = i - lead + 1;
                         if (n < 1) return const SizedBox.shrink();
                         final date = DateTime(day.year, day.month, n),
                             active = n == day.day;
@@ -274,7 +263,8 @@ class _CalendarPageState extends State<CalendarPage> {
                           ),
                         );
                         return Semantics(
-                          label: '$date · ${events.length}',
+                          label:
+                              '${MaterialLocalizations.of(c).formatFullDate(date)} · ${events.length}',
                           button: true,
                           selected: active,
                           child: InkWell(
@@ -371,16 +361,23 @@ class _CalendarPageState extends State<CalendarPage> {
                   subtitle: Text(clinicalDate(c, r['at'] as String)),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    onPressed: () => c.guard(() async {
-                      final repo = c.repo;
-                      await widget.reminders.cancel(
-                        notificationId(r['id'] as String),
+                    onPressed: () async {
+                      final ok = await confirmDialog(
+                        c,
+                        c.tr('حذف الموعد؟', 'Delete appointment?'),
                       );
-                      await widget.reminders.cancel(
-                        notificationId(r['id'] as String) + 1,
-                      );
-                      await repo.removeDocument(r['id'] as String);
-                    }),
+                      if (!ok || !c.mounted) return;
+                      await c.guard(() async {
+                        final repo = c.repo;
+                        await widget.reminders.cancel(
+                          notificationId(r['id'] as String),
+                        );
+                        await widget.reminders.cancel(
+                          notificationId(r['id'] as String) + 1,
+                        );
+                        await repo.removeDocument(r['id'] as String);
+                      });
+                    },
                   ),
                 ),
               ),

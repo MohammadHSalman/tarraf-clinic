@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'presentation/luxury.dart';
+import 'presentation/lock_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import 'application/clinic_controller.dart';
 import 'core/reminders.dart';
@@ -259,37 +259,13 @@ class _ClinicAppState extends State<ClinicApp> with WidgetsBindingObserver {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: clinicTheme(),
       home: locked
-          ? Builder(
-              builder: (inner) => Scaffold(
-                body: Center(
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.fingerprint),
-                    label: Text(controller.tr('فتح العيادة', 'Unlock clinic')),
-                    onPressed: () async {
-                      authenticating = true;
-                      try {
-                        if (await LocalAuthentication().authenticate(
-                          localizedReason: controller.tr(
-                            'فتح ملف العيادة',
-                            'Unlock clinic',
-                          ),
-                          biometricOnly: true,
-                        )) {
-                          if (mounted) setState(() => locked = false);
-                        }
-                      } catch (e) {
-                        if (inner.mounted) {
-                          ScaffoldMessenger.of(
-                            inner,
-                          ).showSnackBar(SnackBar(content: Text('$e')));
-                        }
-                      } finally {
-                        authenticating = false;
-                      }
-                    },
-                  ),
-                ),
-              ),
+          ? LockScreen(
+              arabic: controller.arabic,
+              onUnlocked: () {
+                if (mounted) setState(() => locked = false);
+              },
+              onAuthStart: () => authenticating = true,
+              onAuthEnd: () => authenticating = false,
             )
           : Home(reminders: widget.reminders),
     );
@@ -307,6 +283,7 @@ class _HomeState extends State<Home> {
   int tab = 0;
   String search = '';
   bool critical = false;
+  final visited = <int>{0};
   Future<void> addPatient() async {
     final data = await formDialog(
       context,
@@ -376,17 +353,20 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        child: KeyedSubtree(
-          key: ValueKey(tab),
-          child: switch (tab) {
-            0 => patients(),
-            1 => CalendarPage(reminders: widget.reminders),
-            2 => const ReportsPage(),
-            _ => SettingsPage(reminders: widget.reminders),
-          },
-        ),
+      body: IndexedStack(
+        index: tab,
+        children: [
+          for (var i = 0; i < 4; i++)
+            if (!visited.contains(i))
+              const SizedBox.shrink()
+            else
+              switch (i) {
+                0 => patients(),
+                1 => CalendarPage(reminders: widget.reminders),
+                2 => const ReportsPage(),
+                _ => SettingsPage(reminders: widget.reminders),
+              },
+        ],
       ),
       floatingActionButton: tab == 0
           ? FloatingActionButton.extended(
@@ -399,7 +379,10 @@ class _HomeState extends State<Home> {
         selectedIndex: tab,
         onDestinationSelected: (v) {
           tapFeedback();
-          setState(() => tab = v);
+          setState(() {
+            tab = v;
+            visited.add(v);
+          });
         },
         destinations: [
           NavigationDestination(
@@ -419,6 +402,39 @@ class _HomeState extends State<Home> {
             label: c.tr('الإعدادات', 'Settings'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget backupBanner() {
+    final last = context.clinic.lastBackup;
+    final days = last == null ? 0 : DateTime.now().difference(last).inDays;
+    return Card(
+      color: const Color(0xffFEF3C7),
+      child: ListTile(
+        leading: const Icon(Icons.shield_outlined, color: Color(0xffB45309)),
+        title: Text(
+          last == null
+              ? context.tr('لا توجد نسخة احتياطية بعد', 'No backup yet')
+              : context.tr(
+                  'مرّ $days يوماً على آخر نسخة احتياطية',
+                  '$days days since your last backup',
+                ),
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Color(0xff92400E),
+          ),
+        ),
+        subtitle: Text(
+          context.tr(
+            'البيانات موجودة على هذا الهاتف فقط. اضغط للانتقال إلى الإعدادات.',
+            'Data lives only on this phone. Tap to open Settings.',
+          ),
+        ),
+        onTap: () => setState(() {
+          tab = 3;
+          visited.add(3);
+        }),
       ),
     );
   }
@@ -443,14 +459,20 @@ class _HomeState extends State<Home> {
           onChanged: (v) => setState(() => search = v),
         ),
       ),
-      FilterChip(
-        label: Text(context.tr('تنبيهات طبية', 'Clinical alerts')),
-        selected: critical,
-        onSelected: (v) => setState(() => critical = v),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 16),
+          child: FilterChip(
+            label: Text(context.tr('تنبيهات طبية', 'Clinical alerts')),
+            selected: critical,
+            onSelected: (v) => setState(() => critical = v),
+          ),
+        ),
       ),
       Expanded(
         child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: context.repo.patients(),
+          future: context.clinic.patients(),
           builder: (c, s) {
             if (!s.hasData) return loadingError(s);
             final rows = s.data!
@@ -467,6 +489,8 @@ class _HomeState extends State<Home> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
               children: [
+                if (context.clinic.needsBackup && s.data!.isNotEmpty)
+                  backupBanner(),
                 for (final p in rows)
                   GlassCard(
                     padding: const EdgeInsets.all(16),
@@ -482,7 +506,7 @@ class _HomeState extends State<Home> {
                             ),
                           ),
                           leading: CircleAvatar(
-                            child: Text('${p['name']}'.substring(0, 1)),
+                            child: Text(initialOf('${p['name']}')),
                           ),
                           title: Text('${p['name']}'),
                           subtitle: Column(

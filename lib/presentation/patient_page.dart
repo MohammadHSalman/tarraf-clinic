@@ -254,7 +254,7 @@ class _PatientPageState extends State<PatientPage> {
               child: ExpansionTile(
                 title: Text('${row['procedure_name']}'),
                 subtitle: Text(
-                  '${clinicalDate(c, row['performed_at'] as String)} · ${row['status']}',
+                  '${clinicalDate(c, row['performed_at'] as String)} · ${statusLabel(c, '${row['status']}')}',
                 ),
                 children: [
                   FutureBuilder(
@@ -376,7 +376,7 @@ class _PatientPageState extends State<PatientPage> {
                     (s) => DropdownMenuItem(
                       value: s['session_id'] as String,
                       child: Text(
-                        '${s['procedure_name']} · ${s['performed_at']}',
+                        '${s['procedure_name']} · ${safeDate(c, '${s['performed_at']}')}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -425,7 +425,7 @@ class _PatientPageState extends State<PatientPage> {
               child: ListTile(
                 title: Text(fmt(p['amount_minor'] as int)),
                 subtitle: Text(
-                  '${p['paid_at']} · ${p['voided_at'] == null ? context.tr('مقبوض', 'Received') : context.tr('ملغى', 'Voided')}',
+                  '${shortDate(c, '${p['paid_at']}')} · ${p['voided_at'] == null ? context.tr('مقبوض', 'Received') : context.tr('ملغى', 'Voided')}',
                 ),
                 trailing: p['voided_at'] != null
                     ? null

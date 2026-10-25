@@ -13,7 +13,9 @@ extension ClinicContext on BuildContext {
       return await clinic.mutate(work);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(this).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          this,
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       }
       return null;
     }
@@ -192,3 +194,63 @@ String clinicalDate(BuildContext c, String iso) {
   final at = DateTime.parse(iso).toLocal();
   return "${MaterialLocalizations.of(c).formatMediumDate(at)} · ${TimeOfDay.fromDateTime(at).format(c)}";
 }
+
+/// Strips Dart exception prefixes so the doctor sees only the message.
+String friendlyError(Object e) => '$e'.replaceFirst(
+  RegExp(
+    r'^(Exception|Bad state|Invalid argument\(s\)|FormatException|StateError|ArgumentError)\s*:?\s*',
+  ),
+  '',
+);
+
+/// Date only, localized; falls back to the raw text when unparsable.
+String shortDate(BuildContext c, String raw) {
+  try {
+    return MaterialLocalizations.of(
+      c,
+    ).formatMediumDate(DateTime.parse(raw).toLocal());
+  } catch (_) {
+    return raw;
+  }
+}
+
+/// Date and time, localized; falls back to the raw text when unparsable.
+String safeDate(BuildContext c, String raw) {
+  try {
+    return clinicalDate(c, raw);
+  } catch (_) {
+    return raw;
+  }
+}
+
+String statusLabel(BuildContext c, String status) => switch (status) {
+  'draft' => c.tr('مسودة', 'Draft'),
+  'final' => c.tr('معتمدة', 'Approved'),
+  'legacy' => c.tr('قديمة', 'Legacy'),
+  'cancelled' => c.tr('ملغاة', 'Cancelled'),
+  _ => status,
+};
+
+String initialOf(String name) {
+  final t = name.trim();
+  return t.isEmpty ? '?' : String.fromCharCode(t.runes.first);
+}
+
+Future<bool> confirmDialog(BuildContext c, String title) async =>
+    (await showDialog<bool>(
+      context: c,
+      builder: (d) => AlertDialog(
+        title: Text(title),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(d, false),
+            child: Text(c.tr('إلغاء', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(d, true),
+            child: Text(c.tr('حذف', 'Delete')),
+          ),
+        ],
+      ),
+    )) ??
+    false;

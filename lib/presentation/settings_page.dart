@@ -84,7 +84,7 @@ class SettingsPage extends StatelessWidget {
                 'تأكيد إعداد القفل',
                 'Confirm lock setting',
               ),
-              biometricOnly: true,
+              biometricOnly: false,
             );
             if (ok) await controller.preferences(biometric: value);
           }),
@@ -99,6 +99,14 @@ class SettingsPage extends StatelessWidget {
         ListTile(
           leading: const Icon(Icons.backup_outlined),
           title: Text(c.tr('تصدير نسخة مشفرة', 'Export encrypted backup')),
+          subtitle: Text(
+            controller.lastBackup == null
+                ? c.tr('لم تؤخذ نسخة بعد', 'No backup yet')
+                : c.tr(
+                    'آخر نسخة: ${MaterialLocalizations.of(c).formatMediumDate(controller.lastBackup!.toLocal())}',
+                    'Last backup: ${MaterialLocalizations.of(c).formatMediumDate(controller.lastBackup!.toLocal())}',
+                  ),
+          ),
           onTap: () => c.guard(() async {
             final data = await formDialog(
               c,
@@ -110,9 +118,12 @@ class SettingsPage extends StatelessWidget {
             );
             if (data == null) return;
             final file = await BackupService(repo).export(data['password']!);
-            await SharePlus.instance.share(
+            final result = await SharePlus.instance.share(
               ShareParams(files: [XFile(file.path)]),
             );
+            if (result.status != ShareResultStatus.dismissed) {
+              await controller.markBackup();
+            }
           }),
         ),
         ListTile(
@@ -172,7 +183,7 @@ class TemplatesPage extends StatelessWidget {
       c.tr('نموذج', 'Template'),
       {
         'title': c.tr('العنوان', 'Title'),
-        'type': 'instructions / consent',
+        'type': c.tr('النوع', 'Type'),
         'body': c.tr('النص المعتمد', 'Approved text'),
       },
       choices: {
@@ -224,7 +235,11 @@ class TemplatesPage extends StatelessWidget {
               for (final r in s.data!)
                 ListTile(
                   title: Text('${r['title']}'),
-                  subtitle: Text('${r['type']}'),
+                  subtitle: Text(
+                    r['type'] == 'consent'
+                        ? c.tr('موافقة', 'Consent')
+                        : c.tr('تعليمات', 'Instructions'),
+                  ),
                   onTap: () => edit(c, r),
                   trailing: r['type'] != 'instructions'
                       ? null

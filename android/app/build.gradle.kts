@@ -3,7 +3,19 @@ plugins {
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
-val clinicPassword = rootProject.file("../private/signing-password.txt").readText().trim()
+// Signing secrets are read from android/key.properties (git-ignored) when present,
+// otherwise from the legacy private/ folder. If neither exists (CI, a fresh clone, a
+// debug-only machine) the release build falls back to the debug key instead of failing.
+val keyProps = java.util.Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val legacyPasswordFile = rootProject.file("../private/signing-password.txt")
+val clinicPassword: String? = keyProps.getProperty("storePassword")
+    ?: if (legacyPasswordFile.exists()) legacyPasswordFile.readText().trim() else null
+val clinicStore = keyProps.getProperty("storeFile")?.let { rootProject.file(it) }
+    ?: rootProject.file("../private/clinic-release.jks")
+val hasClinicKey = clinicPassword != null && clinicStore.exists()
 android {
     namespace = "com.tarraf.tarraf_clinic"
     compileSdk = 36
@@ -22,16 +34,19 @@ android {
         versionName = "0.4.0"
     }
     signingConfigs {
-        create("clinicRelease") {
-            storeFile = rootProject.file("../private/clinic-release.jks")
-            storePassword = clinicPassword
-            keyAlias = "clinic"
-            keyPassword = clinicPassword
+        if (hasClinicKey) {
+            create("clinicRelease") {
+                storeFile = clinicStore
+                storePassword = clinicPassword
+                keyAlias = keyProps.getProperty("keyAlias") ?: "clinic"
+                keyPassword = keyProps.getProperty("keyPassword") ?: clinicPassword
+            }
         }
     }
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("clinicRelease")
+            signingConfig = if (hasClinicKey) signingConfigs.getByName("clinicRelease")
+                            else signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

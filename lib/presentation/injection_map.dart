@@ -334,7 +334,6 @@ class _InjectionMapPageState extends State<InjectionMapPage> {
                     context.tr('المادة', 'Material'),
                     context.tr('الكمية', 'Quantity'),
                     'Batch / Lot',
-                    context.tr('الإصدار', 'Version'),
                   ])
                     DataColumn(label: Text(title)),
                 ],
@@ -350,9 +349,6 @@ class _InjectionMapPageState extends State<InjectionMapPage> {
                           ),
                         ),
                         DataCell(Text('${points[i]['lot_number'] ?? '—'}')),
-                        DataCell(
-                          Text('${points[i]['version_id']}'.substring(0, 8)),
-                        ),
                       ],
                     ),
                 ],
