@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,7 +8,7 @@ plugins {
 // Signing secrets are read from android/key.properties (git-ignored) when present,
 // otherwise from the legacy private/ folder. If neither exists (CI, a fresh clone, a
 // debug-only machine) the release build falls back to the debug key instead of failing.
-val keyProps = java.util.Properties().apply {
+val keyProps = Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
