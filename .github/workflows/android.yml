@@ -30,14 +30,14 @@ jobs:
       - name: Test
         run: flutter test 2>&1 | tee test.txt
         continue-on-error: true
-      - name: Build debug APK (x86_64 emulator)
-        run: set -o pipefail; flutter build apk --debug --target-platform android-x64 2>&1 | tee build.txt
+      - name: Build release APK (x86_64 emulator)
+        run: set -o pipefail; flutter build apk --release --target-platform android-x64 --split-debug-info=build/symbols 2>&1 | tee build.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: tarraf-clinic-emulator
           path: |
-            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-release.apk
             analyze.txt
             test.txt
             build.txt
@@ -53,5 +53,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp build/app/outputs/flutter-apk/app-debug.apk tarraf_clinic_emulator.apk
-          gh release create "emulator-${{ github.run_number }}" tarraf_clinic_emulator.apk --title "Emulator build ${{ github.run_number }}" --notes "Debug APK (x86_64) for the Android emulator. Commit ${{ github.sha }}"
+          cp build/app/outputs/flutter-apk/app-release.apk tarraf_clinic_emulator.apk
+          gh release create "emulator-${{ github.run_number }}" tarraf_clinic_emulator.apk --title "Emulator build ${{ github.run_number }}" --notes "Release APK (x86_64, debug-signed) for the Android emulator. Commit ${{ github.sha }}"
