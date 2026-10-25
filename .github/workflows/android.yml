@@ -1,7 +1,10 @@
 name: Android debug APK (emulator)
 on:
   push:
+    branches: [main]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,3 +38,17 @@ jobs:
             analyze.txt
             test.txt
             build.txt
+      - name: Publish report branch
+        if: always()
+        run: |
+          mkdir -p /tmp/rep && cp analyze.txt test.txt build.txt /tmp/rep/ 2>/dev/null || true
+          cd /tmp/rep && git init -q -b ci-report && git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "CI report ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-report
+      - name: Release APK
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-debug.apk tarraf_clinic_emulator.apk
+          gh release create "emulator-${{ github.run_number }}" tarraf_clinic_emulator.apk --title "Emulator build ${{ github.run_number }}" --notes "Debug APK (x86_64) for the Android emulator. Commit ${{ github.sha }}"
